@@ -1,0 +1,92 @@
+---
+title: "In-class Exercise 2: Building a Pareto Chart using R"
+description: |
+  This is my beautiful Pareto Chart.
+author:
+  - name: Mak Han Ren 
+    url: https://www.linkedin.com/in/mak-han-ren/
+    affiliation: School of Computing and Information Systems, SMU
+    affiliation_url: https://scis.smu.edu.sg
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      fig.retina = 3)
+```
+
+
+# Introducing Tidyverse
+
+**Tidyverse** is a collection of R packagesthat share common philosophies andare designed to work together fordoing data science.
+
+### Installing and loading Tidyverse
+
+The code chunk below performs the following three tasks:
++ Create a packaging list called packages.
++ Check if the package(s) on the list have been installed in R, if they have yet to be installedthen go ahead to install the missing package(s).
++ Launch the packages in R using library().
+
+```{r}
+packages = c('tidyverse', 'readxl')
+
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+# The readr Package
+
+**readr** is one of the tidyverse package.
+
++ The goal of **readr** is to provide a fast and friendly way to read rectangular data (like csv, tsv, andfwf).
++ It is designed to flexibly parse many types of datafound in the wild, while still cleanly failing whendata unexpectedly changes.
+
+## Importing Data
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+orders <- read_xls("data/Superstore-2021.xls",
+                   sheet = "Orders")
+returns <- read_xls("data/Superstore-2021.xls",
+                   sheet = "Returns")
+```
+
+## Preparing the Data
+
+### Combine
+
+```{r}
+joined_tab <- left_join(returns, orders,
+                        by = c('Order ID' = 'Order ID'))
+```
+
+### Compute the frequency count by Sub-Category
+
+```{r}
+FC_tab <- joined_tab %>%
+  group_by('Sub-Category') %>%
+  summarise('Returns' = count(as.factor('Sub-Category'))) %>%
+  ungroup()
+```
+
+```{r}
+freq_returned <- joined_tab %>%
+  count("Sub-Category")
+```
+
+```{r}
+freq_returned <- freq_returned %>%
+  arrange(desc(n))
+```
+
+```{r}
+freq_returned$cumulative <- cumsum(freq_returned$n)
+```
+
