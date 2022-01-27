@@ -1,5 +1,5 @@
 ---
-title: "Take-home Exercise 1"
+title: "Take-home Exercise 0"
 description: |
   In this exercise, I learnt how to edit a web article by using distill for RMarkdown
 author:
