@@ -40,10 +40,10 @@ For this task, the data sets entitle Singapore Residents by Planning Area / Subz
 
 ## Installing and Launching R Packages
 
-For the purpose of the exercise, the follow tidyverse packages will be used:
+For the purpose of the exercise, the following packages will be used:
 
++ [**tidyverse**](https://www.tidyverse.org/) package will be used to perform data transformation and data wrangling tasks
 + [**readxl**](https://readxl.tidyverse.org/) package will be used to read and parse a worksheet into R as a tibble data frame format
-+ [**dplyr**](https://dplyr.tidyverse.org/) package will be used to perform data transformation and data wrangling tasks
 + [**ggplot2**](https://ggplot2.tidyverse.org/) package will be used to build the age-sex pyramid
 + [**gganimate**](https://www.rdocumentation.org/packages/gganimate) package will be used to animate the graphics
 + [**gifski**](https://www.rdocumentation.org/packages/gifski) package will be used to render files as a GIF
@@ -211,3 +211,71 @@ Here's the final animated graph showing the population pyramid of Ang Mo Kio pla
 knitr::include_graphics("data/PopPyramid.gif")  
 ```
 
+## Observations
+
+The image below shows the comparison between 2020 vs 2000 with 2020 having the darker shade of color
+
+```{r, echo = FALSE, fig.align = 'center', out.width = '80%', results = 'markup'} 
+knitr::include_graphics("data/amkcompare.png")  
+```
+
+From the age-sex pyramid, we can observe the phenomenon of an [**ageging population**](https://www.population.gov.sg/our-population/population-trends/ageing-population). 
+
+With increasing life expectancy and low fertility rates, the proportion of Singapore’s citizen population aged 65 years and above is rising rapidly - with large cohorts of “baby boomers” entering the post-65 age range.
+
+This phenomenon can also be observed in other planning areas. The process of creating these pyramids can be achieved by changing the target "PA".
+
+In the example below, we will change the target planning area to **"Hougang"** and only people from Hougang will be selected in our new dataset **"respohg"**
+
+```{r}
+#Selecting Hougang as the planning area
+respohg <- subset(respo3, PA =="Hougang",
+select=c(PA, AG, Sex, Pop, Time))
+
+#Aggregating the Hougang dataset
+respohg <- aggregate(formula = Pop ~ Sex + AG + Time, data = respohg, FUN = sum)
+
+#Changing the Male values to negative to flip the chart
+respohg$Pop <- ifelse(respohg$Sex == "Males", -1*respohg$Pop, respohg$Pop)
+```
+
+As we repeat the earlier process, we can then obtain the following image.
+
+```{r}
+#Plotting the age-sex pyramid
+PopPyramid2 <- ggplot(respohg, aes(x = AG, y = Pop, fill = Sex)) +
+  geom_bar(data = subset(respohg, Sex == "Females"), stat = "identity") +
+  geom_bar(data = subset(respohg, Sex == "Males"), stat = "identity") + xlab('Age Group') + ylab('Population') +
+  scale_y_continuous(labels = paste0(as.character(c(seq(200, 0, -100), seq(100, 200, 100))), "k")) +
+  coord_flip()
+
+#Adding the axes label
+PopPyramid2 <- PopPyramid2 + 
+ labs(
+      title = 'Hougang Population Estimate 2000 - 2020\n\n{closest_state}',
+      y = '\n\nPopulation',
+      caption = '\n\nData Source: https://www.singstat.gov.sg/'
+     )
+
+PopPyramid2 <- PopPyramid2 + 
+  transition_states(
+                    Time,
+                    transition_length = 1,
+                    state_length = 2
+                   ) + 
+  enter_fade() +
+  exit_fade() + 
+  ease_aes('cubic-in-out')
+
+#Animating the Pyramid
+animate(
+        PopPyramid2,
+        fps = 24,
+        duration = 30,
+        width = 500,
+        height = 500,
+        renderer = gifski_renderer('PopPyramid2.gif')
+       )
+```
+
+We've thus come up with a process that is easily repeatable just by changing a few variables.
