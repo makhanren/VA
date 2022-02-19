@@ -15,8 +15,7 @@ output: distill::distill_article
 knitr::opts_chunk$set(echo = TRUE,
                       eval = TRUE,
                       warning = FALSE,
-                      message = FALSE,
-                      fig.retina = 3)
+                      message = FALSE)
 ```
 
 # 1.0 The Task
@@ -183,13 +182,13 @@ kids_sb_matrix <- data.matrix(kids_sb2)
 
 We will be building the heat map using **heatmaply()**. We will first build a test heat map with the default clusters before identifying the best number of clusters later.
 
-```{r}
+```{r, fig.width = 5, fig.height = 10}
 heatmaply(normalize(kids_sb_matrix[, -c(1)]),
           Colv=NA,
           seriate = "none",
           colors = Greens,
-          fontsize_row = 6,
-          fontsize_col = 6,
+          fontsize_row = 4,
+          fontsize_col = 5,
           )
 ```
 
@@ -219,19 +218,20 @@ From the figure above, we see that **k = 10** is the optimal number of clusters.
 
 With the best clustering method and clusters identified earlier, we will then replot the heat map while adding in more details such as the titles and labels.
 
-```{r}
+```{r, fig.width = 5, fig.height = 10}
 heatmaply(normalize(kids_sb_matrix[,-c(1)]),
           dist_method = "euclidean",
           hclust_method = "average",
           seriate = "none",
+          show_dendrogram = c(TRUE, FALSE),
           k_row = 10,
           colors = Greens,
-          margins = c(NA,180,60,NA),
-          fontsize_row = 6,
-          fontsize_col = 6,
+          margins = c(NA,200,60,NA),
+          fontsize_row = 4,
+          fontsize_col = 5,
           xlab = "Nutritional Indicators",
           ylab = "Drink Types",
-          main="Starbucks Kids' Drinks nutrition indicator by Drink Types",
+          main="Starbucks Kids' Drinks nutrition \nindicator by Drink Types",
           Colv = NA
           )
 ```
@@ -240,15 +240,15 @@ heatmaply(normalize(kids_sb_matrix[,-c(1)]),
 
 From the heat map, we can see that drinks containing **Salted Caramel have the highest amount of calories** due to a high amount of sodium, cholesterol and carybohydrates. This shows that salted caramel is the most unhealthy ingredient in Starbucks and kids should avoid it if they can.
 
-We can also see that **Hot Chocolate** drinks also have a high amount of calories, total fat, cholesterol and sugars. This is further exacerbated by the fact that kids like to order it in combination with Whipped Cream and Salted Caramel.
+We can also see that **Hot Chocolate drinks also have a high amount of calories, total fat, cholesterol and sugars**. This is further exacerbated by the fact that kids like to order it in combination with Whipped Cream and Salted Caramel.
 
-As mentioned earlier, **Whipped Cream** also contributes to a high amount of calories due to a higher amount of total fats. As such, kids should try their best to avoid ordering whipped cream to reduce their calorie count.
+As mentioned earlier, **Whipped Cream also contributes to a high amount of calories** due to a higher amount of total fats. As such, kids should try their best to avoid ordering whipped cream to reduce their calorie count.
 
-And upon further observation, drinks that contain any form of **Milk** has a higher amount of calories due to a higher amount of saturated fats which leads to a higher amount of total fats. Kids should be aware of this and try to avoid adding milk to their drinks.
+And upon further observation, drinks that contain any form of **Milk has a higher amount of calories** due to a higher amount of saturated fats which leads to a higher amount of total fats. Kids should be aware of this and try to avoid adding milk to their drinks.
 
-Interestingly, **Hot Chocolate and Pumpkin Spice** drinks have the highest amount of caffeine compared to the other drinks. As such, kids should avoid these drinks if they can or they would be packed with caffeine and be restless the entire day.
+Interestingly, **Hot Chocolate and Pumpkin Spice drinks have the highest amount of caffeine** compared to the other drinks. As such, kids should avoid these drinks if they can or they would be packed with caffeine and be restless the entire day.
 
-As for the healthy drinks, consumers should go for **Creme** drinks which has a lower calorie count compared to the other drinks. They can consume this in combination with no whipped cream and no milk for the lowest amount of calories.
+As for the healthy drinks, consumers should go for **Creme drinks which has a lower calorie count** compared to the other drinks. They can consume this in combination with no whipped cream and no milk for the lowest amount of calories.
 
 
 
