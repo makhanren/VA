@@ -1,0 +1,261 @@
+---
+title: "Take Home Exercise 3"
+description: |
+  Putting Visual Analytics into Practical Use.
+author:
+  - name: Mak Han Ren 
+    url: https://www.linkedin.com/in/mak-han-ren/
+    affiliation: School of Computing and Information Systems, SMU
+    affiliation_url: https://scis.smu.edu.sg
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      fig.retina = 3)
+```
+
+# 1.0 The Task
+
+We are tasked to create a data visualisation to segment kid drinks and other by nutrition indicators. For the purpose of this task, starbucks_drink.csv should be used.
+
+## 1.1 Task Considerations
+
+Since we are doing a segmentation of kid drinks via nutritional indicators, we will be paying more attention towards the nutritional values to build a data visualisation that helps us tell a story of whether kids' drinks in Starbucks are healthy or should parents be treating their kids to just plain water at Starbucks instead as the healthier choice.
+
+Upon observing the variables, we can note down 13 different nutritional indicators  - **Portion (fl oz), Calories, Calories from fat, Total Fat(g), Saturated fat(g), Trans fat(g), Cholesterol(mg), Sodium(mg), Total Carbohydrate(g), Dietary Fiber(g), Sugars(g), Protein(g), Caffeine(mg)**.
+
+However, upon further inspection we notice that **Portion (fl oz)** may not be an effective nutritional indicator since it should be correlated to the drink size ordered. As such, we will first work on determining if there is any correlation between portion and the other nutritional indicators before moving onto buildling our data visualisation.
+
+The last step is in choosing the best kind of illustration to tell our data story on how kids should avoid drinking Starbucks due to the lack of nutritional value. And given the data visualisations we were exposed to in lesson 4, there is a choice between parallel coordinates graph or a heatmap. In this case, a heat map will be the superior choice given how we can combine it with hierachical clustering to determine the clustering of nutritional indicators.
+
+As such, there are two parts to our tasks where **(1) We will be building a correlogram to determine correlation between Portion and other nutritional indicators and (2) A heat map of Starbucks drinks to determine the level of nutritional indicators in each drink.**
+
+# 2.0 Installing and Loading the Required Packages
+
+We will be using the following packages:
+
++ seriation, dendextend and heatmaply to construct our heat map
++ corrplot to construct the correlation matrix (correlogram)
++ tidyverse and kableExtra for data cleaning and wrangling
+
+```{r}
+packages = c('seriation', 'dendextend', 'heatmaply','corrplot', 'tidyverse','kableExtra')
+
+for(p in packages){library
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+# 3.0 Loading the dataset
+
+As mentioned earlier, we will be using the "starbucks_drink.csv" dataset for to perform our task
+
+```{r}
+sb <- read_csv("data/starbucks_drink.csv")
+kable(head(sb))
+```
+
+# 4.0 Data Wrangling
+
+For the purpose of this task, we are focused solely on kids' drinks so we will excluding other non-required rows in our dataset.
+
+```{r}
+kids_sb <-sb %>% filter(Category == 'kids-drinks-and-other')
+kable(head(kids_sb))
+```
+```{r, echo = FALSE, fig.align = 'center', out.width = '100%', results = 'markup'} 
+knitr::include_graphics("data/image1.jpg")  
+```
+
+From the details above, we notice that *Caffeine(mg)* is not classified correctly as it is classified as a character rather than a numerical value instead. As such, we will be converting it into numerical format before moving onto further data analysis tasks.
+
+```{r}
+kids_sb$`Caffeine(mg)` <- parse_number(kids_sb$`Caffeine(mg)`)
+```
+
+Now we can see that *Caffeine(mg)* has been classified in the correct format. 
+
+```{r, echo = FALSE, fig.align = 'center', out.width = '100%', results = 'markup'} 
+knitr::include_graphics("data/image2.jpg")  
+```
+
+And with this, we can finally move onto our data visualisation tasks
+
+# 5.0 Task 1: Correlogram of Nutritional Values
+
+As we mentioned earlier, we would want to determine if there are nutritional indicators strongly correlated to each other and whether **Portion (fl oz)** has high correlation with any other nutritional indicators.
+
+# 5.1 Further Data Wrangling
+
+Before we being on the task, we will need to filter out only the nutritional indicators for analysis.
+
+```{r}
+kids_sb.cor <- cor(kids_sb[, 3:15])
+```
+
+# 5.2 Building the Correlogram
+
+After filtering the data, we will be using **corrplot()** to plot the correlogram.
+
+```{r}
+corrplot.mixed(kids_sb.cor, 
+               lower = "ellipse", 
+               upper = "number",
+               tl.pos = "lt",
+               diag = "l",
+               order="AOE",
+               tl.col = "black")
+```
+Given how the correlation values are too big for the graph, we will be adjusting their sizes using **tl.cex and number.cex**.
+
+```{r}
+corrplot.mixed(kids_sb.cor, 
+               lower = "ellipse", 
+               upper = "number",
+               tl.pos = "lt",
+               diag = "l",
+               order="AOE",
+               tl.col = "black",
+               tl.cex = 0.6,
+               number.cex = 0.6)
+```
+# 5.3 Analysis of Correlogram
+
+Here are some interesting stats we observed from the correlogram:
+
++ Portion size is indeed positively correlated to the other nutritional indicators where the larger the portion, the higher in other nutritional indicators
++ As expected, **calories from fat has a 1.0 correlation with Total Fats** while also being strongly correlated with **Saturated Fats and Trans Fats**.
++ **Carbohydrates has a strong positive correlation with Sugars, Sodium and Calories**. This means that drinks that are high in carbohydrates will most likely also be more unhealthy for consumption.
++ **Dietary Fiber has a positive correlation with Caffeine and Total Carbohydrates**. We understand the relationship between [Dietary Fiber and Carbohydrates because it is a form of Carbs](https://www.hsph.harvard.edu/nutritionsource/carbohydrates/fiber/), but it is rather interesting how an increase in dietary fiber is correlated with an increase in caffeine. 
+
+Based on these observations, we will be reducing the dataset by dividing the relevant nutritional indicators with the mean of the Portion size.
+
+# 6.0 Task 2: Heatmap of Nutritional Indicators
+
+As mentioned in section 1.1 we will be building a heat map to show the relationship between kids' drinks and nutritional indicators.
+
+# 6.1 Data Wrangling
+
+We first adjust the drinks name by combining the columns **Name, Milk and Whipped Cream** using the **paste()** function.
+
+```{r}
+kids_sb$DrinkName = paste(kids_sb$Name,kids_sb$Milk, kids_sb$`Whipped Cream`)
+```
+
+We then need to collapse the dataset by using **groupby() and dividing the dataset by the Portion (fl oz) mean.**
+
+```{r}
+kids_sb2 <- kids_sb %>%
+  group_by(`DrinkName`) %>%
+  summarise('Calories' = sum(`Calories`)/sum(`Portion(fl oz)`),
+           'Calories from fat'  = sum(`Calories from fat`)/sum(`Portion(fl oz)`),
+           'Total Fat(g)' = sum(`Total Fat(g)`)/sum(`Portion(fl oz)`),
+           'Saturated fat(g)' = sum(`Saturated fat(g)`)/sum(`Portion(fl oz)`),
+           'Trans fat(g)' = sum(`Trans fat(g)`)/sum(`Portion(fl oz)`),
+           'Cholesterol(mg)' = sum(`Cholesterol(mg)`)/sum(`Portion(fl oz)`),
+           'Sodium(mg)' = sum(`Sodium(mg)`)/sum(`Portion(fl oz)`),
+           'Total Carbohydrate(g)' = sum(`Total Carbohydrate(g)`)/sum(`Portion(fl oz)`),
+           'Dietary Fiber(g)' = sum(`Dietary Fiber(g)`)/sum(`Portion(fl oz)`),
+           'Sugars(g)' = sum(`Sugars(g)`)/sum(`Portion(fl oz)`),
+           'Protein(g)' = sum(`Protein(g)`)/sum(`Portion(fl oz)`),
+           'Caffeine(mg)' = sum(`Caffeine(mg)`)/sum(`Portion(fl oz)`)) %>%
+  ungroup()
+kable(head(kids_sb2))
+```
+From the graph above, we see that there are a total number of 60 unique drinks.
+
+We then need to **set the drink names as the row number** before **transforming the new dataset into a data matrix** so we can build a heat map.
+
+```{r}
+row.names(kids_sb2) <- kids_sb2$DrinkName
+kids_sb_matrix <- data.matrix(kids_sb2)
+```
+
+# 6.3 Building the Heat Map
+
+We will be building the heat map using **heatmaply()**. We will first build a test heat map with the default clusters before identifying the best number of clusters later.
+
+```{r}
+heatmaply(normalize(kids_sb_matrix[, -c(1)]),
+          Colv=NA,
+          seriate = "none",
+          colors = Greens,
+          fontsize_row = 6,
+          fontsize_col = 6,
+          )
+```
+
+# 6.4 Identifying the Best Number of Clusters
+
+And now to make the heat map better, we will be identifying the best clustering method and the best number of clusters.
+
+To find the best clustering method, we will be utilising **dend_expend()**.
+
+```{r}
+kids_sb_matrix2 <- dist(normalize(kids_sb_matrix[, -c(1)]), method = "euclidean")
+dend_expend(kids_sb_matrix2)[[3]]
+```
+
+The output indicates that the **'average' method should be used** since it has the highest optimum value.
+
+And to determine the best number of clusters, we will be using **find_k()**.
+
+```{r}
+kids_sb_cluster <- hclust(kids_sb_matrix2, method = "average")
+kids_sb_k <- find_k(kids_sb_cluster)
+plot(kids_sb_k)
+```
+From the figure above, we see that **k = 10** is the optimal number of clusters.
+
+# 6.5 Replotting the Heat Map
+
+With the best clustering method and clusters identified earlier, we will then replot the heat map while adding in more details such as the titles and labels.
+
+```{r}
+heatmaply(normalize(kids_sb_matrix[,-c(1)]),
+          dist_method = "euclidean",
+          hclust_method = "average",
+          seriate = "none",
+          k_row = 10,
+          colors = Greens,
+          margins = c(NA,180,60,NA),
+          fontsize_row = 6,
+          fontsize_col = 6,
+          xlab = "Nutritional Indicators",
+          ylab = "Drink Types",
+          main="Starbucks Kids' Drinks nutrition indicator by Drink Types",
+          Colv = NA
+          )
+```
+
+# 7.0 Heat Map Findings 
+
+From the heat map, we can see that drinks containing **Salted Caramel have the highest amount of calories** due to a high amount of sodium, cholesterol and carybohydrates. This shows that salted caramel is the most unhealthy ingredient in Starbucks and kids should avoid it if they can.
+
+We can also see that **Hot Chocolate** drinks also have a high amount of calories, total fat, cholesterol and sugars. This is further exacerbated by the fact that kids like to order it in combination with Whipped Cream and Salted Caramel.
+
+As mentioned earlier, **Whipped Cream** also contributes to a high amount of calories due to a higher amount of total fats. As such, kids should try their best to avoid ordering whipped cream to reduce their calorie count.
+
+And upon further observation, drinks that contain any form of **Milk** has a higher amount of calories due to a higher amount of saturated fats which leads to a higher amount of total fats. Kids should be aware of this and try to avoid adding milk to their drinks.
+
+Interestingly, **Hot Chocolate and Pumpkin Spice** drinks have the highest amount of caffeine compared to the other drinks. As such, kids should avoid these drinks if they can or they would be packed with caffeine and be restless the entire day.
+
+As for the healthy drinks, consumers should go for **Creme** drinks which has a lower calorie count compared to the other drinks. They can consume this in combination with no whipped cream and no milk for the lowest amount of calories.
+
+
+
+
+
+
+
+
+
+
