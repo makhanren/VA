@@ -1,0 +1,154 @@
+---
+title: "Take Home Exercise 4"
+description: |
+  Visualising and Analysing Time-series Financial Data.
+author:
+  - name: Mak Han Ren 
+    url: https://www.linkedin.com/in/mak-han-ren/
+    affiliation: School of Computing and Information Systems, SMU
+    affiliation_url: https://scis.smu.edu.sg
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+# 1.0 The Tasks
+
+In this take-home exercise, you are required to perform the tasks below:
+
+1. Script stock prices of [top 40 companies in Singapore by market capitalisation](https://companiesmarketcap.com/singapore/largest-companies-in-singapore-by-market-cap/) between 1st January 2020 - 31st December 2021 by using **tidyquant** R package.
+
+2. Using either **calender heatmap or horizon graph**, prepare a data visualisation showing the historical stock prices by the top 40 companies by market capitalisation.
+
+# 1.1 Tasks Considerations
+
+From the website companiesmarketcap, there are a total of 41 companies listed there. As such, after downloading the entire data as 'companiesmarketcap.csv', we will then need to **filter out only the top 40 companies** from this list.
+
+With the 40 companies filtered out, we will then use the **tidyquant** package to obtain the relevant information from Yahoo Finance. During this process, we need to ensure that the tickers from companiesmarketcap match the ones listed on stock markets so that we can extract the required data from Yahoo Finance successfully.
+
+After scraping the relevant data, we will then move onto building the data visualisation. In this case, we will be building a horizon graph using the **ggHoriplot** package. The ggHoriplot package allows us to build a time-series visualisation that will show us in great details the movement of stock prices across the past 2 years.
+
+Given how the [COVID-19 epidemic started in 2020](https://en.wikipedia.org/wiki/COVID-19_pandemic), we will then be observing how it has impacted the top 40 companies stock prices after we've built the visualisation. The hypothesis will be that the prices fell drastically during the inital stages of the pandemic but these companies will gradually recover over the next months as countries globally start increasing their vaccination rates. 
+
+# 2.0 Installing and Loading the Required Packages
+
+We will be using the following packages:
+
++ tidyquant to extract the data from Yahoo Finance
++ ggHoriPlot and ggthemes to construct the time series horizon graph
++ tidyverse and kableExtra for data cleaning and wrangling
+
+```{r}
+packages = c('tidyquant','ggHoriPlot', 'ggthemes','tidyverse','kableExtra')
+
+for(p in packages){library
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+# 3.0 Loading the dataset
+
+After downloading the dataset from [the website](https://companiesmarketcap.com/singapore/largest-companies-in-singapore-by-market-cap/), we will be using the 'companiesmarketcap.csv' to perform our task
+
+
+```{r}
+cmc <- read_csv("data/companiesmarketcap.csv")
+kable(head(cmc))
+```
+
+# 4.0 Data Wrangling
+
+We will be arranging the data via market cap and only extracting the top 40 tickers to be utilised for data scraping from Yahoo Finance.
+
+```{r}
+cmc40 <- cmc %>%
+  arrange(desc(marketcap)) %>%
+  head(40)
+
+cmc40symbol <- cmc %>%
+  arrange(desc(marketcap)) %>%
+  select(Symbol) %>%
+  head(40)
+```
+
+# 5.0 Data Scraping
+
+After which, we will be extracting the symbols of these top 40 companies and use the **tidyquant** package to extract the relevant information from Yahoo Finance.
+
+We can choose either the open or close price to build our horizon graph and we will be choosing the close price in this case.
+
+```{r}
+from_date = "2020-01-01"
+to_date = "2021-12-31"
+
+stock_data <- cmc40symbol$Symbol %>%
+    tq_get(get = "stock.prices", from = from_date, to = to_date) %>%
+    select(symbol, date, close)
+```
+
+# 5.1 Further Data Wrangling
+
+To make visualisation better, we will be replacing the ticker symbols with the companies' name for easy recognisation when we observe the horizon graph later.
+
+```{r}
+stock_data2 <- left_join(stock_data, cmc40,
+                  by = c("symbol" = "Symbol"))
+```
+
+We then clean the data further by removing the unrequired columns in the dataset
+
+```{r}
+stock_data2 <- stock_data2 %>% select(date,close,Name)
+kable(head(stock_data2))
+```
+
+# 6.0 Building The Horizon Graph
+
+We will be using the **ggHoriPlot** package to build the time-series horizon graph of top 40 companies by market capitalisation in Singapore.
+
+After reviewing the sample from [ggHoriPlot github](https://rivasiker.github.io/ggHoriPlot/index.html), we will be **adjusting the palette to 'RdBu'** so as to show a bigger contrast in the visualisation.
+
+```{r, layout="l-page", fig.width=10, fig.height=6, fig.align='center'}
+stock_data2 %>% 
+  ggplot() +
+  geom_horizon(aes(date,
+                   close, origin = 'min')) +
+  facet_grid(Name~.) +
+  theme_few() +
+  scale_fill_hcl(palette = 'RdBu', reverse = F) +
+  theme(
+    panel.spacing.y=unit(0, "lines"),
+    strip.text.y = element_text(size = 8, angle = 0, hjust = 0),
+    axis.text.x = element_text(size = 4, angle = 0, hjust = 0.5),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.border = element_blank(), 
+    ) +
+  scale_x_date(expand=c(0,0), 
+               date_breaks = "1 month", 
+               date_labels = "%b%Y") +
+  xlab('Date') +
+  ggtitle('Closing stock prices of top 40 companies in Singapore by market capitalisation \nfrom 1/1/2020 to 31/12/2021')
+```
+
+# 7.0 Observations
+
+From the time-series horizon graph we plotted above, we have the following observations:
+
++ There was a **dip in stock prices across the market during April 2020** which coincided with the start of COVID-19 pandemic spread in Singapore
+
++ The market started to recover by the end of 2020 as Singapore had more control over the pandemic spread and people had higher confidence in businesses globally
+
++ Seeing how **ComfortDelGro consistently dipped in prices** even after the other companies have recovered slightly across the 2 years, **the transportation industry has not recovered fully yet**. This could be due to 'Work from Home' being the default protocols for businesses in Singapore leading to a reduction in the need for private car hire and inevitably led to transportation companies like ComfortDelGro decrease in stock prices ovre the two years.
+
++ There are some businesses that we do not have the complete 2-year horizon data from such as Grab and TDCX so we won't be able to have the full picture on the impact that COVID-19 had on their business
